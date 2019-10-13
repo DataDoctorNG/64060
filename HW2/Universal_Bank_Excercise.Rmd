@@ -1,0 +1,176 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+#Imports
+library(caret)
+library(ISLR)
+library(dplyr)
+library(ggplot2)
+library(FNN)
+library(class) 
+library(dummies)
+library(gmodels)
+library(e1071)
+library(Metrics)
+```
+
+```{r}
+#Reading the File
+Bank <- read.csv('UniversalBank.csv')
+Bank$Education <- sapply(Bank$Education, as.character)
+head(Bank,5)
+```
+
+```{r}
+#Summary Statistics
+summary(Bank)
+```
+
+```{r}
+#Creating Dummy Variables
+Bank <- dummy.data.frame(Bank, names=c("Education"),sep = ".")
+#Taking Out ID and Zip
+Model <- subset(Bank,select = -c(ID,ZIP.Code))
+#Summary Statistics for the New Data Frame
+summary(Model)
+```
+
+
+```{r}
+#Creating Training and Test Sets
+set.seed(15)
+Test_Index = createDataPartition(Model$Age,p=0.4, list=FALSE) # 40% reserved for Test
+Test_Data = Model[Test_Index,]
+Test_Data[, 10] = sapply(Test_Data[, 10], as.factor)
+Train_Data = Model[-Test_Index,] # Validation and Training data is rest
+Train_Data[, 10] = sapply(Train_Data[, 10], as.factor)
+```
+
+
+Train_Predictors[, c(1, 2, 3, 4, 5, 9)] <- preProcess(Train_Predictors[, c(1, 2, 3, 4, 5, 9)], method=c("center", "scale"))
+```{r}
+#First Model for k=1
+set.seed(15)
+Search_grid <- expand.grid(k=c(1))
+
+#Training and Test Sets
+Train_Predictors<-Train_Data[,-10] 
+Test_Predictors<-Test_Data[,-10]
+
+Train_targets <- sapply(Train_Data[,10], as.factor)
+Test_targets  <- sapply(Test_Data[,10], as.factor)
+
+norm <- preProcess(Train_Predictors[, c(1, 2, 3, 4, 5, 9)], method=c("center", "scale"))
+
+Train_Predictors[, c(1, 2, 3, 4, 5, 9)] <- predict(norm, Train_Predictors[, c(1, 2, 3, 4, 5, 9)])
+
+#Model
+nn <- train(Train_Predictors, Train_targets, preProcess = c("scale", "center"), method="knn", tuneGrid=Search_grid)
+
+#Predictions Test Set
+Test_Predictions <- predict(nn, Test_Predictors)
+
+#Predictions Customer 
+
+Customer <- data.frame(Age = 40, Experience = 10, Income = 84, Family = 2, CCAvg = 2, Education.1 = 0, Education.2 = 1, Education.3 = 0, Mortgage = 0, Securities.Account = 0, CD.Account = 0, Online = 1, CreditCard = 1, stringsAsFactors = FALSE)
+predictions_1st_Customer <- predict(nn, Customer)
+
+#Scores for the First Model Test Set
+#Accuracy
+accuracy(Test_Predictions, Test_targets)
+
+nn
+
+#Confusion Matrix for the Test Set
+CrossTable(x=Test_targets, y=Test_Predictions, prop.chisq = FALSE)
+print(predictions_1st_Customer)
+```
+
+
+```{r}
+#2nd Model using a Search Procedure
+set.seed(15)
+#Search Grid, Training Sets, and Test Sets
+Search_grid <- expand.grid(k=c(2:30))
+test_labels<-Test_Data[,-10] 
+test_targets<-Test_Data[,10]
+test_targets <- sapply(test_targets, as.factor)
+
+train_labels <- Train_Data[, -10]
+train_targets <- Train_Data[, 10]
+train_targets <- sapply(train_targets, as.factor)
+
+norm <- preProcess(train_labels[, c(1, 2, 3, 4, 5, 9)], method=c("center", "scale"))
+
+train_labels[, c(1, 2, 3, 4, 5, 9)] <- predict(norm, train_labels[, c(1, 2, 3, 4, 5, 9)])
+
+#Model
+model<-train(train_labels, train_targets, method="knn", tuneGrid=Search_grid)
+
+#Predictions Test Set
+predictions_test <- predict(model, test_labels)
+
+#Predictions 2nd Customer
+predictions_2nd_Customer <- predict(model, Customer)
+
+#Scores for the 2nd Model Test Set
+#Accuracy
+accuracy(predictions_test, test_targets)
+
+model
+
+#Confusion Matrix for Test Set
+CrossTable(x=test_targets,y=predictions_test, prop.chisq = FALSE)
+print(predictions_2nd_Customer)
+```
+
+```{r}
+set.seed(15)
+#Creating the Training, Testing, and Validation Sets
+Search_grid <- expand.grid(k=c(5))
+Train_Index = createDataPartition(Bank$Age,p=0.5, list=FALSE)
+train <- Bank[Train_Index,]
+train_targets <- train[, 10]
+train_labels <- train[, -10]
+train_targets <- sapply(train_targets, as.factor)
+
+Test_Val <- Bank[-Train_Index,]
+Test_Index = createDataPartition(Test_Val$Age,p=0.6, list=FALSE)
+
+valid <- Test_Val[Test_Index,]
+valid_targets <- valid[, 10]
+valid_labels <- valid[, -10]
+valid_targets <- sapply(valid_targets, as.factor)
+
+test <- Test_Val[-Test_Index,]
+test_targets <- test[, 10]
+test_labels <- test[, -10]
+test_targets <- sapply(test_targets, as.factor)
+
+norm <- preProcess(train_labels[, c(1, 2, 3, 4, 5, 9)], method=c("center", "scale"))
+
+train_labels[, c(1, 2, 3, 4, 5, 9)] <- predict(norm, train_labels[, c(1, 2, 3, 4, 5, 9)])
+
+model<-train(train_labels, train_targets, method="knn", tuneGrid=Search_grid)
+
+#Predictions 
+predictions_train <- predict(model, train_labels)
+predictions_test <- predict(model, test_labels)
+predictions_valid <- predict(model, valid_labels)
+
+#Confusion Matrices
+CrossTable(x=train_targets,y=predictions_train, prop.chisq = FALSE)
+CrossTable(x=test_targets,y=predictions_test, prop.chisq = FALSE)
+CrossTable(x=valid_targets,y=predictions_valid, prop.chisq = FALSE)
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
