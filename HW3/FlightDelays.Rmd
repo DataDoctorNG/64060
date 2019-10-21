@@ -1,0 +1,70 @@
+---
+title: "Assignment 3"
+output: html_notebook
+---
+
+```{r}
+#Import Packages
+library(caret)
+library(ISLR)
+library(e1071) 
+library(dummies)
+library(pROC)
+library(dplyr)
+library("gmodels")
+```
+
+```{r}
+#Read Data
+FlightDelays <- read.csv("FlightDelays.csv")
+```
+
+```{r}
+#Defining the Model Data and Manipulating the Data
+#Taking Non Categorical Variables
+Model_data <- subset(FlightDelays,select = -c(CRS_DEP_TIME,DEP_TIME, DISTANCE, FL_DATE, FL_NUM, Weather))
+Model_data$DAY_WEEK <- as.factor(Model_data$DAY_WEEK)
+Model_data$DAY_OF_MONTH <- as.factor(Model_data$DAY_OF_MONTH)
+
+Model_data <- transform(Model_data, Flight.Status = ifelse(Model_data$Flight.Status == "delayed", 1, 0))
+```
+
+```{r}
+#Creating Training and Validation Sets
+set.seed(123)
+Train_Index = createDataPartition(FlightDelays$CARRIER,p=0.6, list=FALSE)
+Train <-Model_data[Train_Index,]
+Test  <-Model_data[-Train_Index,]
+```
+
+```{r}
+#Defining the Naive Bayes Model
+set.seed(123)
+nb_model <-naiveBayes(Flight.Status~.,data = Train, usekernal= T)
+Predicted_Test_labels <-predict(nb_model,Test, type = "raw")
+Predicted_Test_labels <- transform(Predicted_Test_labels, Prediction = ifelse(Predicted_Test_labels[,2] > .5, 1, 0))
+
+```
+
+```{r}
+#Creating the Counts and Proporation Table
+
+Table <- FlightDelays %>% 
+    group_by( DEST ) %>% 
+    summarise( count = n(), proportion = n()/length(FlightDelays$DEST) )
+
+Table
+
+```
+
+```{r}
+#Creating the ROC and Confusion Matrix
+
+roc(Test$Flight.Status, Predicted_Test_labels[,2])
+
+plot.roc(Test$Flight.Status,Predicted_Test_labels[,2])
+
+CrossTable(x=Test$Flight.Status,y=Predicted_Test_labels[,3], prop.chisq = FALSE)
+
+```
+
