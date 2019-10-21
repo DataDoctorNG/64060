@@ -30,6 +30,7 @@ Model_data <- transform(Model_data, Flight.Status = ifelse(Model_data$Flight.Sta
 ```
 
 ```{r}
+#1
 #Creating Training and Validation Sets
 set.seed(123)
 Train_Index = createDataPartition(FlightDelays$CARRIER,p=0.6, list=FALSE)
@@ -38,6 +39,7 @@ Test  <-Model_data[-Train_Index,]
 ```
 
 ```{r}
+#2
 #Defining the Naive Bayes Model
 set.seed(123)
 nb_model <-naiveBayes(Flight.Status~.,data = Train, usekernal= T)
@@ -47,6 +49,7 @@ Predicted_Test_labels <- transform(Predicted_Test_labels, Prediction = ifelse(Pr
 ```
 
 ```{r}
+#3
 #Creating the Counts and Proporation Table
 
 Table <- FlightDelays %>% 
@@ -58,6 +61,7 @@ Table
 ```
 
 ```{r}
+#4
 #Creating the ROC and Confusion Matrix
 
 roc(Test$Flight.Status, Predicted_Test_labels[,2])
