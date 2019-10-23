@@ -21,6 +21,7 @@ FlightDelays <- read.csv("FlightDelays.csv")
 
 ```{r}
 #Defining the Model Data and Manipulating the Data
+#Variables are recoded as factors and columns are eliminated that are not needed. Additionally the target variable is recoded to binary
 #Taking Non Categorical Variables
 Model_data <- subset(FlightDelays,select = -c(CRS_DEP_TIME,DEP_TIME, DISTANCE, FL_DATE, FL_NUM, Weather))
 Model_data$DAY_WEEK <- as.factor(Model_data$DAY_WEEK)
@@ -40,7 +41,7 @@ Test  <-Model_data[-Train_Index,]
 
 ```{r}
 #2
-#Defining the Naive Bayes Model
+#Defining the Naive Bayes Model. The predicted test labels are generated in raw and binary form
 set.seed(123)
 nb_model <-naiveBayes(Flight.Status~.,data = Train, usekernal= T)
 Predicted_Test_labels <-predict(nb_model,Test, type = "raw")
@@ -50,7 +51,7 @@ Predicted_Test_labels <- transform(Predicted_Test_labels, Prediction = ifelse(Pr
 
 ```{r}
 #3
-#Creating the Counts and Proporation Table
+#Creating the Counts and Proporation Table. The data is grouped by the destination, while the count and proportion field is defined.
 
 Table <- FlightDelays %>% 
     group_by( DEST ) %>% 
@@ -62,7 +63,7 @@ Table
 
 ```{r}
 #4
-#Creating the ROC and Confusion Matrix
+#Creating the ROC and Confusion Matrix the AUC is plotted and the confusion matrix is returned
 
 roc(Test$Flight.Status, Predicted_Test_labels[,2])
 
