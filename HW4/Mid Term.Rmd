@@ -1,0 +1,184 @@
+---
+title: "Mid Term Machine Learning: K Means Clustering"
+output: html_notebook
+---
+
+```{r}
+#Import Packages 
+library(tidyverse)
+library(factoextra) 
+library(ISLR)
+library(flexclust)
+library(dplyr)
+library(caret)
+library(imputeTS)
+```
+
+```{r}
+#Read Data 
+university <- read.csv("Universities.csv")
+university_all <- read.csv("Universities.csv")
+#A. 
+#Dropping missing observations
+university <- na.omit(university)
+comparison <- university
+```
+
+```{r}
+#B.
+#Data Preprocessing
+set.seed(123)
+norm <- preProcess(university[, c(4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20)], method=c("center", "scale"))
+university[, c(4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20)] <- predict(norm, university[, c(4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20)])
+```
+
+```{r}
+#Plotting and Summarizing Data to Identify Potential Clusters
+set.seed(123)
+univ_continuous <- university[, c(4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20)]
+distance <- get_dist(univ_continuous)
+fviz_dist(distance)
+```
+
+```{r}
+#Defining the algorithmn for a k of 10 and 15
+set.seed(123)
+k5 <- kmeans(univ_continuous, centers = 5, nstart = 25)
+k15 <- kmeans(univ_continuous, centers = 15, nstart = 25)
+```
+
+```{r}
+#
+#Getting the Size and Center for the Clusters
+set.seed(123)
+k5$centers
+k5$centers
+k15$size
+k15$size
+```
+
+```{r}
+#Visualizing the Clusters
+set.seed(123)
+fviz_cluster(k5, data = univ_continuous)
+fviz_cluster(k15, data = univ_continuous)
+```
+
+```{r}
+#Using Other Distances 
+set.seed(123)
+k5_median = kcca(univ_continuous, k=5, kccaFamily("kmedians"))
+k15_median = kcca(univ_continuous, k=15, kccaFamily("kmedians"))
+```
+
+```{r}
+#Creating the cluster index
+set.seed(123)
+clusters_index_5 <- predict(k5_median)
+clusters_index_15 <- predict(k15_median)
+dist(k5_median@centers)
+dist(k15_median@centers)
+```
+
+```{r}
+#Cluster Map K5
+image(k5_median)
+points(univ_continuous, col=clusters_index_5, pch=10, cex=0.3)
+```
+
+```{r}
+#Cluster Map K15
+image(k15_median)
+points(univ_continuous, col=clusters_index_15, pch=19, cex=0.3)
+```
+
+```{r}
+#The optimal choice was 5 clearly 15 is too many clusters as can be seen from the garphs of the spread of the clusters themselves
+```
+
+```{r}
+#Testing Whether Our K was Optimal
+set.seed(123)
+#Clearly the 5 was not the optimal choice. 3 is a better choice
+#Scaling the dataframe z-score
+fviz_nbclust(univ_continuous, kmeans, method = "wss")
+#Scaling the dataframe silhoutte method
+fviz_nbclust(univ_continuous, kmeans, method = "silhouette")
+```
+
+```{r}
+#Creating the cluster index for 3 clusters
+set.seed(123)
+k3_median = kcca(univ_continuous, k=3, kccaFamily("kmedians"))
+clusters_index_3 <- predict(k3_median)
+```
+
+```{r}
+#Merging the clusters to the original data frame
+set.seed(123)
+clusters <- data.frame(clusters_index_3)
+Comparison <- cbind(comparison, clusters)
+Comparison$room_board_fees <- Comparison$room + Comparison$board + Comparison$add..fees + Comparison$estim..book.costs + Comparison$estim..personal..
+```
+
+```{r}
+#c
+#Summary Statistics for Each Cluster
+#All
+set.seed(123)
+Summary_cont <- Comparison %>% 
+    group_by( clusters_index_3 ) %>%
+    summarise( Acceptance_rate = sum(X..appl..accepted)/ sum(X..appli..rec.d), Avg_out_state_tuition=mean(out.of.state.tuition), Avg_int_state_tuition=mean(in.state.tuition), room_board_fees=mean(room_board_fees), mean_PHD_fac=mean(X..fac..w.PHD), mean_stud_fac_ratio=mean(stud..fac..ratio), mean_grad_rate=mean(Graduation.rate), priv_count = sum(Public..1...Private..2. == 2), pub_count = sum(Public..1...Private..2. == 1))
+Summary_cont
+
+#Private
+Summary_cont_priv <- Comparison %>% filter(Public..1...Private..2. == 2) %>%
+    group_by( clusters_index_3 ) %>%
+    summarise( Acceptance_rate = sum(X..appl..accepted)/ sum(X..appli..rec.d), Avg_out_state_tuition=mean(out.of.state.tuition), Avg_int_state_tuition=mean(in.state.tuition), room_board_fees=mean(room_board_fees), mean_PHD_fac=mean(X..fac..w.PHD), mean_stud_fac_ratio=mean(stud..fac..ratio), mean_grad_rate=mean(Graduation.rate))
+Summary_cont_priv
+
+
+#Public
+Summary_cont_pub <- Comparison %>% filter(Public..1...Private..2. == 1) %>%
+    group_by( clusters_index_3 ) %>%
+    summarise( Acceptance_rate = sum(X..appl..accepted)/ sum(X..appli..rec.d), Avg_out_state_tuition=mean(out.of.state.tuition), Avg_int_state_tuition=mean(in.state.tuition), room_board_fees=mean(room_board_fees), mean_PHD_fac=mean(X..fac..w.PHD), mean_stud_fac_ratio=mean(stud..fac..ratio), mean_grad_rate=mean(Graduation.rate))
+Summary_cont_pub
+
+#c. According to the first table that contains information on all information within the clusters. The mean graduation rate is lowest for cluster 3. The mean student to faculty ratio is lowest for cluster 2. The mean PHD faculty ratio is lowest for cluster 1. The mean room, board, and fees is lowest for cluster 1. The average in state tuition is lowest for cluster 3 and same for out of state tuition. The acceptance rate is lowest for cluster 2.
+#d.There does appear to be a relationship between the category variable. cluster 3 is the only cluster with a majority public schools. This explains the low average tution rates.
+#e. Some additional information that could help explain the data would be the state of the school, or the operating budget of the university, or the amount of academic endowments of the university.
+```
+
+```{r}
+#centers for clusters
+k3 <- kmeans(univ_continuous, centers = 3, nstart = 25)
+
+```
+
+
+
+```{r}
+#f. Isolating the data to Tufts University
+
+library(dplyr)
+library(stats)
+
+Tufts <- filter(university_all, College.Name == "Tufts University")
+
+#Euclidean Distance for Each Clusters it is clear that cluster 1 has the lowest distance from Tufts
+#Cluster 1
+dist(rbind(Tufts[, -c(1, 2, 3, 10)], k3$centers[1,]))
+#Cluster 2
+dist(rbind(Tufts[, -c(1, 2, 3, 10)], k3$centers[2,]))
+#Cluster 3
+dist(rbind(Tufts[, -c(1, 2, 3, 10)], k3$centers[3,]))
+```
+
+```{r}
+#Impute NAs with average from cluster 1
+cluster_1 <- filter(Comparison, clusters_index_3 == 1)
+avg_cluster_1 <- mean(cluster_1[,c(10)])
+Tufts[, c(10)] <- avg_cluster_1
+Tufts[, c(10)]
+```
+
