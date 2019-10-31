@@ -155,6 +155,22 @@ k3 <- kmeans(univ_continuous, centers = 3, nstart = 25)
 
 ```
 
+```{r}
+#centers for clusters
+k3$centers[1,]
+k3$centers[2,]
+k3$centers[3,]
+
+library(dplyr)
+library(stats)
+
+Tufts <- filter(university_all, College.Name == "Tufts University")
+print(Tufts)
+
+```
+
+
+
 
 
 ```{r}
@@ -164,6 +180,8 @@ library(dplyr)
 library(stats)
 
 Tufts <- filter(university_all, College.Name == "Tufts University")
+norm <- preProcess(Tufts[, -c(1, 2, 3, 10)], method=c("center", "scale"))
+Tufts[, -c(1, 2, 3, 10)] <- predict(norm, Tufts[, -c(1, 2, 3, 10)])
 
 #Euclidean Distance for Each Clusters it is clear that cluster 1 has the lowest distance from Tufts
 #Cluster 1
@@ -175,10 +193,10 @@ dist(rbind(Tufts[, -c(1, 2, 3, 10)], k3$centers[3,]))
 ```
 
 ```{r}
-#Impute NAs with average from cluster 1
-cluster_1 <- filter(Comparison, clusters_index_3 == 1)
-avg_cluster_1 <- mean(cluster_1[,c(10)])
-Tufts[, c(10)] <- avg_cluster_1
+#Impute NAs with average from cluster 3
+cluster_3 <- filter(Comparison, clusters_index_3 == 3)
+avg_cluster_3 <- mean(cluster_3[,c(10)])
+Tufts[, c(10)] <- avg_cluster_3
 Tufts[, c(10)]
 ```
 
