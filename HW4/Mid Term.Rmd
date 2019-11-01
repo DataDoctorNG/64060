@@ -149,7 +149,7 @@ Summary_cont_pub
 
 #c. According to the first table that contains information on all information within the clusters. The mean graduation rate is lowest for cluster 3. The mean student to faculty ratio is lowest for cluster 2. The mean PHD faculty ratio is lowest for cluster 1. The mean room, board, and fees is lowest for cluster 1. The average in state tuition is lowest for cluster 3 and same for out of state tuition. The acceptance rate is lowest for cluster 2.
 #d.There does appear to be a relationship between the category variable. cluster 3 is the only cluster with a majority public schools. This explains the low average tution rates.
-#e. Some additional information that could help explain the data would be the state of the school, or the operating budget of the university, or the amount of academic endowments of the university.
+#e. Some additional information that could help explain the data would be the state of the school, or the operating budget of the university, or the amount of academic endowments of the university.There is traditionally a lot of differences between public and private schools in this regard and could explain why some of the public schools fell into a different cluster.
 ```
 
 ```{r}
