@@ -1,0 +1,67 @@
+---
+title: "Assignment 4"
+output: html_notebook
+---
+
+```{r}
+#Import Packages
+library(stats) 
+#install.packages("fpc")
+library(cluster)
+library(dplyr)
+library(caret)
+```
+
+```{r}
+#Read Data
+Cereals <- read.csv("Cereals.csv")
+Cereals <- na.omit(Cereals)
+norm  <- preProcess(Cereals[, c(4:16)], method=c("center", "scale"))
+Cereals[, c(4:16)] <- predict(norm, Cereals[, c(4:16)])
+```
+
+```{r}
+#A
+agnes_clust_single <- agnes(Cereals, method="single", metric = "euclidean")
+agnes_clust_com <- agnes(Cereals, method="complete", metric = "euclidean")
+agnes_clust_avg <- agnes(Cereals, method="average", metric = "euclidean")
+agnes_clust_ward <- agnes(Cereals, method="ward", metric = "euclidean")
+```
+
+```{r}
+#A
+#It is clear from the analysis that ward had the highest score of 98.12%
+agnes_clust_single$ac
+agnes_clust_com$ac
+agnes_clust_avg$ac
+agnes_clust_ward$ac
+```
+
+```{r}
+#B
+#Based on the Dendrogram it appears that 6 is a worthy choice since the depth of coverage does not appear to be overfitted, while retaining coverage of important groups of cereals that can explain the variance in the data distribution.
+d <- dist(Cereals, method = "euclidean")
+hc_ward <- hclust(d,method = "ward.D")
+plot(hc_ward, cex = 0.6, hang=-1)
+rect.hclust(hc_ward, k = 6, border = 1:3)
+```
+
+```{r}
+#C
+set.seed(5)
+#a
+Test_Index <- createDataPartition(Cereals$rating,p=0.3, list=FALSE) # 70% reserved for cluster A data
+Cereals_A <- Cereals[-Test_Index,]
+Cereals_B <- Cereals[Test_Index,]  
+
+agnes_clust_A <- agnes(Cereals_A, method="ward", metric = "euclidean")
+#b
+
+#c
+```
+
+
+```{r}
+#D
+#Due to the fact that the rating variable seems to be on a 0 to 100 scale it does not appear like it would be needed to normalize. I would say that a cluster could be created with a healthiness threshold in mind. This threshold could also be applied to the other inputs like protein, fat, etc. It might not be a bad idea to normalize to see how all the data points compare to the overall distribution of data points.
+```
