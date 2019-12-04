@@ -1,0 +1,186 @@
+---
+title: "Final_Project"
+output: html_notebook
+---
+
+```{r}
+#Import the Necessary Packages
+library(caret)
+library(factoextra) 
+library(ISLR)
+library(flexclust)
+library(dplyr)
+library(ggplot2)
+library(FNN)
+library(class) 
+library(dummies)
+library(gmodels)
+library(e1071)
+library(Metrics)
+library(pROC)
+library(stats) 
+```
+
+```{r}
+#Reading the Data
+Brand <- read.csv("BathSoap.csv")
+Brand_Comp <- Brand
+Brand_model <- Brand
+Brand_export <- Brand
+Brand <- Brand[,-c(23:31)]
+```
+
+```{r}
+#Normalizing the Data
+norm <- preProcess(Brand[, c(11:19)], method=c("center", "scale"))
+Brand[, c(11:19)] <- predict(norm, Brand[, c(11:19)])
+```
+
+data<-Brand_model[, c(11)]
+
+```{r}
+#Normalizing the Data for Predictions
+data<-data.frame(normalizing=Brand_model[, c(11)])
+norm_pred <- preProcess(data, method=c("center", "scale"))
+Brand_model[, c(11)] <- predict(norm_pred, data)
+```
+
+```{r}
+set.seed(123)
+#Testing for the optimal amount of clusters for the first grouping
+fviz_nbclust(Brand[, c(12:18)], kmeans, method = "wss")
+#Scaling the dataframe silhoutte method
+fviz_nbclust(Brand[, c(12:18)], kmeans, method = "silhouette")
+
+```
+
+```{r}
+set.seed(123)
+#Testing for the optimal amount of clusters for the second grouping
+fviz_nbclust(Brand[, c(19:37)], kmeans, method = "wss")
+#Scaling the dataframe silhoutte method
+fviz_nbclust(Brand[, c(19:37)], kmeans, method = "silhouette")
+
+
+```
+
+```{r}
+set.seed(123)
+#Testing for the optimal amount of clusters for the third grouping
+fviz_nbclust(Brand[c(12:37)], kmeans, method = "wss")
+#Scaling the dataframe silhoutte method
+fviz_nbclust(Brand[c(12:37)], kmeans, method = "silhouette")
+
+```
+
+```{r}
+#Due to the fact that the first grouping produced 3 clusters as the optimal k and the last grouping gave us 4 but had a higher total within sum of square the first grouping is the best to use. 
+
+
+```
+
+```{r}
+set.seed(123)
+#Defining the model to get the clusters
+target_model <- kcca(Brand[, c(12:18)], k=3, kccaFamily("kmeans"))
+
+cluster_assign <- predict(target_model, Brand[, c(12:18)])
+cluster_assign <- data.frame(cluster=cluster_assign)
+Brand_Comp <- cbind(Brand_Comp, cluster_assign)
+Brand_model <- cbind(Brand_model, cluster_assign)
+```
+
+```{r}
+set.seed(123)
+#Analyzing the Clusters to identify the target variable
+set.seed(123)
+Summary_Brand <- Brand_Comp %>% 
+    group_by(cluster) %>%
+    summarise(Avg_No_Brands=mean(No..of.Brands), Avg_Brand_Ratio=mean(Brand.Runs.Trans), Avg_Total_Volume=mean(Total.Volume),Avg_Value=mean(Value), Avg_Vol_Trans=mean(Vol.Tran), Avg_Avg_Price=mean(Avg..Price), number=n())
+Summary_Brand
+
+```
+
+```{r}
+set.seed(123)
+#Creating the Target Variable
+Brand_model$target <- ifelse(Brand_model$cluster==2,1,0)
+
+#I chose cluster 2 because while the cluster had a high number of brands, the ratio of brand runs per transactions was the highest. It had a high vol per transactions and value with the highest average price.This is significant, because these customers clearly show that they purchase a lot and are consistent in their purchases. Thus are probably more susceptible to a promotional campaign.
+```
+
+```{r}
+set.seed(123)
+#Defining the Predictors
+Brand_model <- Brand_model[, c(2:11, 48)]
+Brand_model <- dummy.data.frame(Brand_model, names=c("SEC", "FEH", "MT", "SEX", "CHILD", "CS", "AGE"),sep = ".")
+#Creating Training and Test Sets
+set.seed(123)
+Test_Index = createDataPartition(Brand_model$target,p=0.2, list=FALSE) # 20% reserved for Test
+Test_Data = Brand_model[Test_Index,]
+Test_Data[, c(42)] = sapply(Test_Data[, c(42)], as.factor)
+Train_Data = Brand_model[-Test_Index,] # Validation and Training data is rest
+Train_Data[, c(42)] = sapply(Train_Data[, c(42)], as.factor)
+```
+
+```{r}
+#Setting Up the Model
+#Cross Validation
+train.control <- trainControl(method = "cv", number = 3)
+#Decision Tree Model
+dtree_fit <- train(target ~.,data=Train_Data, method="glm", 
+                   family="binomial", trControl = train.control)
+```
+
+```{r}
+results_prob <- predict(dtree_fit,newdata=Brand_model,type = "prob")
+results_prob <- data.frame(probability=results_prob$`1`)
+results <- ifelse(results_prob > 0.5,1,0)
+results <- data.frame(prediction=results)
+results_prob_train <- predict(dtree_fit,newdata=Train_Data,type = "prob")
+results_prob_train <- data.frame(probability=results_prob_train$`1`)
+results_train <- ifelse(results_prob_train$probability > 0.5,1,0)
+results_prob_test <- predict(dtree_fit,newdata=Test_Data,type = "prob")
+results_prob_test <- data.frame(probability=results_prob_test$`1`)
+results_test <- ifelse(results_prob_test$probability > 0.5,1,0)
+results_data <- data.frame(probability_score=results_prob, Prediction=results)
+Prediction_Data <- cbind(Brand_export, results_data)
+```
+
+```{r}
+#The results show that the model performs decent on the training and test sets. The challenge is to get the predictive power on the target variable up. In the future I think there are two approaches that can help. 
+#1. Get more data to help with the sample size of the model
+#2. If class imbalance persists use sampling techniques to balance the classes more equitably
+#Training
+#Accuracy
+accuracy(results_train, Train_Data$target)
+
+#Confusion Matrix for the Training Set
+CrossTable(x=Train_Data$target, y=results_train, prop.chisq = FALSE)
+
+#AUC
+
+roc(Train_Data$target, results_prob_train$probability)
+
+plot.roc(Train_Data$target, results_prob_train$probability)
+
+#Testing
+accuracy(results_test, Test_Data$target)
+
+#Confusion Matrix for the Test Set
+CrossTable(x=Test_Data$target, y=results_test, prop.chisq = FALSE)
+
+#AUC
+
+roc(Test_Data$target, results_prob_test$probability)
+
+plot.roc(Test_Data$target, results_prob_test$probability)
+```
+
+```{r}
+
+write.csv(Prediction_Data,'C:\\Users\\nicho\\Google Drive\\School\\Graduate School\\Kent State\\Fall 2019\\Machine Learning Fundamentals\\Final Exam\\Predictions.csv', row.names = FALSE)
+
+```
+
+
